@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Funil Entregadores iFood</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: cabeçalho azul Direcional, barra de filtros fixa, resumo (KPIs + funil) antes do detalhe (quebras e lista de clientes) */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#EBEFF6; --line:#D9DFEA;
+  --fg:#16213A; --muted:#5B6782;
+  --brand:#003DA5; --brand-ink:#FFFFFF; --brand-soft:#DCE6F7;
+  --won:#1D7F55; --won-soft:#DAF0E5;
+  --lost:#BA0C2F; --lost-soft:#F8DDE3;
+  --open:#003DA5; --open-soft:#DCE6F7;
+  --warn:#A55B00; --warn-soft:#FBEBD3;
+  --display:"Montserrat","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1424; --surface:#151F34; --surface-2:#1C2842; --line:#2A3858;
+  --fg:#E6EBF5; --muted:#9AA7C2;
+  --brand:#0B47B8; --brand-ink:#FFFFFF; --brand-soft:#1C2E55;
+  --won:#46C08A; --won-soft:#163A2C; --lost:#F0607C; --lost-soft:#431824;
+  --open:#7EA6F2; --open-soft:#1C2E55; --warn:#F2AE55; --warn-soft:#3F2C12;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0D1424; --surface:#151F34; --surface-2:#1C2842; --line:#2A3858;
+  --fg:#E6EBF5; --muted:#9AA7C2;
+  --brand:#0B47B8; --brand-ink:#FFFFFF; --brand-soft:#1C2E55;
+  --won:#46C08A; --won-soft:#163A2C; --lost:#F0607C; --lost-soft:#431824;
+  --open:#7EA6F2; --open-soft:#1C2E55; --warn:#F2AE55; --warn-soft:#3F2C12;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--body);font-variant-numeric:tabular-nums;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+.wrap{max-width:1360px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* Cabeçalho */
+header.top{background:var(--brand);color:var(--brand-ink)}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-block:22px 18px}
+.eyebrow{font:600 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+h1{font:800 clamp(22px,3.2vw,30px)/1.1 var(--display);margin:6px 0 0;text-wrap:balance}
+h1 .arrow{display:inline-block;width:.55em;height:.55em;background:#BA0C2F;clip-path:polygon(0 0,100% 50%,0 100%);margin-right:.3em;vertical-align:.08em}
+.sync{display:flex;align-items:center;gap:10px;font-size:13px}
+.sync .dot{width:8px;height:8px;border-radius:50%;background:#7CE0A8;box-shadow:0 0 0 3px rgba(124,224,168,.25)}
+.sync.err .dot{background:#FF8FA3;box-shadow:0 0 0 3px rgba(255,143,163,.25)}
+.sync.load .dot{background:#FFE08A}
+.btn{border:1px solid currentColor;background:transparent;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:500}
+header .btn{color:var(--brand-ink);border-color:rgba(255,255,255,.55)}
+header .btn:hover{background:rgba(255,255,255,.12)}
+
+/* Filtros */
+.filters{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.filters .wrap{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;padding-block:12px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.f select,.f input{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;max-width:100%}
+.f.search input{width:220px}
+.f.date input{width:140px}
+.filters .btn{color:var(--brand);border-color:var(--line);background:var(--surface)}
+.filters .btn:hover{border-color:var(--brand)}
+.active-count{font-size:12px;color:var(--muted);align-self:center}
+
+main.wrap{display:flex;flex-direction:column;gap:18px;padding-block:20px 40px}
+.banner{border-radius:8px;padding:10px 14px;background:var(--lost-soft);color:var(--fg);border:1px solid var(--lost)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.kpi .k{font-size:12px;color:var(--muted);font-weight:500}
+.kpi .v{font:700 26px/1.15 var(--display)}
+.kpi .s{font-size:12px;color:var(--muted)}
+.kpi.won .v{color:var(--won)} .kpi.lost .v{color:var(--lost)} .kpi.open .v{color:var(--open)}
+
+/* Painéis */
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.grid.wide{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+@media (max-width:900px){.grid.wide{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.panel h2{font:700 15px/1.2 var(--display);margin:0;color:var(--fg)}
+.panel .hint{font-size:12px;color:var(--muted);margin:-6px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.c-won{background:var(--won)} .c-lost{background:var(--lost)} .c-open{background:var(--open)}
+
+/* Funil */
+.funnel{display:flex;flex-direction:column;gap:6px}
+.fstep{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr) 92px;gap:10px;align-items:center;cursor:pointer;border-radius:6px;padding:3px 4px;border:1px solid transparent;background:none;text-align:left;width:100%}
+.fstep:hover{background:var(--surface-2)}
+.fstep.sel{border-color:var(--brand);background:var(--brand-soft)}
+.fstep .lab{font-weight:500;font-size:13px}
+.fstep .lab small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.fbar{height:26px;background:var(--surface-2);border-radius:4px;position:relative;overflow:hidden}
+.fbar span{position:absolute;inset:0 auto 0 0;background:var(--brand);border-radius:4px;display:flex;align-items:center;padding-left:8px;color:var(--brand-ink);font-weight:600;font-size:12px;min-width:26px}
+.fbar span.last{background:var(--won)}
+.fnum{text-align:right;font-size:12px;color:var(--muted)}
+.fnum b{display:block;color:var(--fg);font-size:13px}
+.fnum .drop{color:var(--lost)}
+@media (max-width:520px){.fstep{grid-template-columns:minmax(0,1fr) 80px}.fstep .fbar{grid-column:1/-1;grid-row:2}}
+
+/* Barras horizontais genéricas */
+.hbars{display:flex;flex-direction:column;gap:7px}
+.hrow{display:grid;grid-template-columns:minmax(110px,180px) minmax(0,1fr) 36px;gap:10px;align-items:center;font-size:13px;background:none;border:0;padding:2px 4px;border-radius:5px;text-align:left;width:100%}
+.hrow.click{cursor:pointer}
+.hrow.click:hover{background:var(--surface-2)}
+.hrow.sel{background:var(--brand-soft)}
+.hrow .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stack{display:flex;height:16px;border-radius:3px;overflow:hidden;background:var(--surface-2)}
+.stack > i{display:block;height:100%}
+.hrow .t{text-align:right;font-weight:600}
+
+/* Colunas semanais */
+.cols{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.col{flex:1 0 26px;display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative}
+.col .bar{display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden}
+.col .bar i{display:block}
+.col .lbl{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;font-weight:600}
+.colx{display:flex;gap:6px;overflow:hidden}
+.colx span{flex:1 0 26px;text-align:center;font-size:10px;color:var(--muted);white-space:nowrap}
+
+/* Tabelas */
+.tscroll{overflow-x:auto;margin:0 -4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--fg)}
+th .ar{opacity:.7}
+td.num,th.num{text-align:right}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover td{background:var(--surface-2)}
+tbody tr.sel td{background:var(--brand-soft)}
+.name{font-weight:600}
+.sub{color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.won{background:var(--won-soft);color:var(--won)}
+.pill.lost{background:var(--lost-soft);color:var(--lost)}
+.pill.open{background:var(--open-soft);color:var(--open)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.steps{display:flex;gap:3px;margin-bottom:3px}
+.steps i{width:14px;height:6px;border-radius:2px;background:var(--surface-2);border:1px solid var(--line)}
+.steps i.on{background:var(--brand);border-color:var(--brand)}
+.steps.won i.on{background:var(--won);border-color:var(--won)}
+.steps.lost i.on{background:var(--lost);border-color:var(--lost)}
+.note{max-width:320px;color:var(--muted);font-size:12px}
+.tablehead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.empty{color:var(--muted);padding:18px 4px;text-align:center}
+
+/* Detalhe do cliente */
+.drawer-bg{position:fixed;inset:0;background:rgba(8,14,30,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);z-index:21;box-shadow:-8px 0 30px rgba(0,0,0,.2);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer header{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.drawer h3{font:700 18px/1.2 var(--display);margin:0 0 6px}
+.drawer .body{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:0}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;font-weight:500}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:start;padding-bottom:12px;position:relative}
+.tl li::before{content:"";position:absolute;left:8px;top:14px;bottom:0;width:2px;background:var(--line)}
+.tl li:last-child::before{display:none}
+.tl .mk{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);background:var(--surface);z-index:1}
+.tl li.on .mk{background:var(--brand);border-color:var(--brand)}
+.tl li.on.final .mk{background:var(--won);border-color:var(--won)}
+.tl li.stop .mk{background:var(--lost);border-color:var(--lost)}
+.tl .d{color:var(--muted);font-size:12px}
+.tl li:not(.on):not(.stop) .what{color:var(--muted)}
+.box{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:13px}
+.box b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.x{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 6px}
+/* Login */
+.login{display:flex;justify-content:center;padding:48px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.login-card{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--brand);border-radius:10px;padding:24px;width:min(400px,100%);display:flex;flex-direction:column;gap:10px}
+.login-card h2{font:700 20px/1.2 var(--display);margin:0}
+.login-card p{margin:0;color:var(--muted)}
+.login-card label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.login-card input{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:16px}
+.login-card .login-err{color:var(--lost);font-weight:500}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);padding:10px 14px;font-weight:600}
+.btn.primary:disabled{opacity:.6;cursor:wait}
+footer.wrap{color:var(--muted);font-size:12px;padding-block:0 30px}
+@media (prefers-reduced-motion:no-preference){.fbar span,.stack>i{transition:width .35s ease}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Direcional · Programa Entregadores iFood</div>
+      <h1><span class="arrow" aria-hidden="true"></span>Funil de vendas</h1>
+    </div>
+    <div class="sync load" id="sync" hidden>
+      <span class="dot" aria-hidden="true"></span>
+      <span id="syncText">Carregando a planilha…</span>
+      <button class="btn" id="refresh" type="button">Atualizar</button>
+      <button class="btn" id="logout" type="button" hidden>Sair</button>
+    </div>
+  </div>
+</header>
+
+<section class="login" id="login" hidden>
+  <form id="loginForm" class="login-card" autocomplete="on">
+    <h2>Acesso restrito</h2>
+    <p>Este painel mostra dados de clientes do programa. Digite a senha que você recebeu da Direcional.</p>
+    <input type="text" name="username" value="painel-funil-ifood" autocomplete="username" hidden>
+    <label for="pw">Senha</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <p class="login-err" id="loginErr" role="alert" hidden></p>
+    <button class="btn primary" id="enter" type="submit">Entrar</button>
+  </form>
+</section>
+
+<div id="app" hidden>
+<div class="filters">
+  <div class="wrap">
+    <div class="f search"><label for="fq">Buscar cliente</label><input id="fq" type="search" placeholder="Nome ou observação"></div>
+    <div class="f"><label for="fsdr">SDR</label><select id="fsdr"></select></div>
+    <div class="f"><label for="femp">Empreendimento</label><select id="femp"></select></div>
+    <div class="f"><label for="fsit">Situação</label><select id="fsit"></select></div>
+    <div class="f"><label for="fstage">Alcançou a etapa</label><select id="fstage"></select></div>
+    <div class="f date"><label for="fde">Atendido de</label><input id="fde" type="date"></div>
+    <div class="f date"><label for="fate">Até</label><input id="fate" type="date"></div>
+    <button class="btn" id="clear" type="button">Limpar filtros</button>
+    <span class="active-count" id="activeCount"></span>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="banner" id="err" hidden></div>
+
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <section class="grid wide">
+    <div class="panel">
+      <h2>Funil por etapa</h2>
+      <p class="hint">Quantos clientes chegaram a cada etapa. À direita, a conversão sobre a etapa anterior e quantos perdemos parados nela. Clique numa etapa para filtrar.</p>
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <div class="panel">
+      <h2>Por que perdemos</h2>
+      <p class="hint">Motivo lido das observações dos clientes fechados e perdidos.</p>
+      <div class="hbars" id="reasons"></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Por SDR</h2>
+      <div class="tscroll"><table id="sdrTable"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Por empreendimento</h2>
+      <div class="legend"><span><i class="c-won"></i>Contrato assinado</span><span><i class="c-open"></i>Em andamento</span><span><i class="c-lost"></i>Perdido</span></div>
+      <div class="hbars" id="emp"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Entrada de leads por semana</h2>
+    <p class="hint">Semana da data de atendimento do SDR, colorida pela situação atual de cada lead.</p>
+    <div class="cols" id="weeks"></div>
+    <div class="colx" id="weeksx"></div>
+  </section>
+
+  <section class="panel">
+    <div class="tablehead">
+      <h2 id="listTitle">Clientes</h2>
+      <span class="sub">Clique num cliente para ver a linha do tempo. <span class="pill warn">parado</span> = em andamento sem movimentação há mais de 7 dias.</span>
+    </div>
+    <div class="tscroll"><table id="list"></table></div>
+  </section>
+</main>
+
+<footer class="wrap" id="foot"></footer>
+</div>
+
+<div class="drawer-bg" id="dbg" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="dName"></aside>
+
+<script>
+/* ===== Configuração ===== */
+const CONFIG = {
+  // URL do App da Web do Apps Script (apps-script.gs). A planilha em si nunca é lida daqui.
+  apiUrl: "",
+  refreshMinutes: 5,
+  staleDays: 7
+};
+
+const norm = s => (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim().toLowerCase();
+const clean = s => (s||"").replace(/[\t ]/g," ").replace(/\s+/g," ").trim();
+const EMPTY = new Set(["","-","n/a","na","—"]);
+const has = s => !EMPTY.has(norm(s));
+
+function parseDate(s){
+  const m=(s||"").match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!m) return null;
+  const d=new Date(+m[3],+m[2]-1,+m[1]);
+  return isNaN(d)?null:d;
+}
+function parseBRL(s){
+  s=(s||"").trim(); if(!/\d/.test(s)) return null;
+  const digits=s.replace(/\D/g,""); if(!digits) return null;
+  return /[.,]\d{2}$/.test(s) ? +digits/100 : +digits;
+}
+
+// Colunas localizadas pelo nome do cabeçalho (resiste a colunas reordenadas).
+// Telefone e CPF nunca são lidos.
+const COLS = {
+  nome:     h=>h.startsWith("nome"),
+  sdr:      h=>h.includes("sdr responsavel"),
+  dAtend:   h=>h.includes("data atendimento"),
+  status:   h=>h==="status",
+  dPerda:   h=>h.includes("data perdida"),
+  obs1:     h=>h==="observacao",
+  imovel:   h=>h.includes("imovel escolhido"),
+  valor:    h=>h.includes("valor do imovel"),
+  envioDoc: h=>h.startsWith("envio da documentacao"),
+  dDoc:     h=>h.includes("enviada a documentacao"),
+  aprov:    h=>h.startsWith("aprovacao caixa"),
+  dAprov:   h=>h.includes("caixa aprovou"),
+  dProp:    h=>h.includes("proposta foi enviada"),
+  sla:      h=>h.includes("sla"),
+  dAceite:  h=>h.includes("proposta foi aceita"),
+  contrato: h=>h.startsWith("contrato assinado"),
+  dContrato:h=>h.includes("contrato foi assinado"),
+  obs2:     h=>h==="observacoes"
+};
+
+const STAGES = [
+  {key:"lead",     name:"Lead atendido",       short:"Atendido"},
+  {key:"imovel",   name:"Imóvel definido",     short:"Imóvel"},
+  {key:"docs",     name:"Docs enviados à Caixa",short:"Docs"},
+  {key:"caixa",    name:"Aprovado na Caixa",   short:"Caixa"},
+  {key:"proposta", name:"Proposta enviada",    short:"Proposta"},
+  {key:"aceite",   name:"Proposta aceita",     short:"Aceite"},
+  {key:"contrato", name:"Contrato assinado",   short:"Contrato"}
+];
+
+function reason(r){
+  const t=norm(r.obs2+" | "+r.obs1);
+  if(/nao compareceu/.test(t)) return "Não compareceu à visita";
+  if(/restri|financiamento|renda|pendenc|valor de ato|imovel no cpf|credito/.test(t)) return "Crédito, renda ou restrição";
+  if(/beneficio/.test(t)) return "Não contemplado no benefício";
+  if(/sem retorno|nao retorn|nao atende|bloqueou|nao respond|sem resposta/.test(t)) return "Sem retorno do cliente";
+  if(/pronto|perfil|casa|outra oportunidade|tenda|interesse/.test(t)) return "Perfil ou outra opção";
+  if(/problemas pessoais/.test(t)) return "Motivo pessoal";
+  return "Desistência sem detalhe";
+}
+
+function toRecords(rows){
+  const head=rows[0].map(norm);
+  const idx={};
+  for(const [k,fn] of Object.entries(COLS)) idx[k]=head.findIndex(fn);
+  const missing=Object.entries(idx).filter(([,i])=>i<0).map(([k])=>k);
+  const get=(row,k)=>idx[k]<0?"":clean(row[idx[k]]);
+  const out=[];
+  rows.slice(1).forEach((row,n)=>{
+    const nome=get(row,"nome"); if(!nome) return;
+    const r={id:n,nome};
+    for(const k of Object.keys(COLS)) if(k!=="nome") r[k]=get(row,k);
+    r.sdr=r.sdr||"Sem SDR";
+    r.emp=has(r.imovel)?r.imovel:"Não definido";
+    r.valorN=parseBRL(r.valor);
+    r.dates={lead:parseDate(r.dAtend),docs:parseDate(r.dDoc),caixa:parseDate(r.dAprov),
+             proposta:parseDate(r.dProp),aceite:parseDate(r.dAceite),contrato:parseDate(r.dContrato),perda:parseDate(r.dPerda)};
+    const yes=s=>norm(s).startsWith("sim");
+    const reached=[
+      true,
+      has(r.imovel),
+      !!r.dates.docs||has(r.envioDoc),
+      yes(r.aprov),
+      !!r.dates.proposta,
+      yes(r.sla)||!!r.dates.aceite,
+      yes(r.contrato)
+    ];
+    r.stage=reached.lastIndexOf(true);
+    const st=norm(r.status);
+    r.sit = yes(r.contrato) ? "won" : /perdid/.test(st) ? "lost" : "open";
+    r.reason = r.sit==="lost" ? reason(r) : "";
+    const evts=Object.values(r.dates).filter(Boolean).map(d=>+d);
+    r.lastMove=evts.length?new Date(Math.max(...evts)):null;
+    r.idle=r.lastMove?Math.floor((startOfDay(new Date())-r.lastMove)/864e5):null;
+    r.stale = r.sit==="open" && r.idle!=null && r.idle>CONFIG.staleDays;
+    r.cycle = r.sit==="won" && r.dates.lead && r.dates.contrato ? Math.round((r.dates.contrato-r.dates.lead)/864e5) : null;
+    out.push(r);
+  });
+  return {records:out,missing};
+}
+
+/* ===== Estado ===== */
+let DATA=[], lastSync=null, sortBy={k:"lead",dir:-1}, openId=null;
+const $=id=>document.getElementById(id);
+const SIT={won:"Contrato assinado",open:"Em andamento",lost:"Perdido"};
+const fmtN=n=>n.toLocaleString("pt-BR");
+const fmtBRL=n=>n==null?"—":n.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const fmtMi=n=>n>=1e6?"R$ "+(n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:2})+" mi":fmtBRL(n);
+const fmtD=d=>d?d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"—";
+const pct=(a,b)=>b?Math.round(a/b*100)+"%":"—";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function startOfDay(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function iso(d){return d.toISOString().slice(0,10)}
+
+/* ===== Acesso ===== */
+const KEY="funil-ifood-senha";
+let senha=null, timer=null;
+try{senha=sessionStorage.getItem(KEY)}catch(_){}
+
+function showLogin(msg){
+  senha=null; try{sessionStorage.removeItem(KEY)}catch(_){}
+  clearInterval(timer); DATA=[]; closeDrawer();
+  $("app").hidden=true; $("logout").hidden=true; $("sync").hidden=true;
+  $("login").hidden=false; $("loginErr").textContent=msg||""; $("loginErr").hidden=!msg;
+  $("pw").value=""; $("pw").focus();
+}
+
+async function fetchRows(pw){
+  if(!CONFIG.apiUrl) throw Object.assign(new Error("O painel ainda não foi ligado à planilha (falta a URL do Apps Script)."),{code:"config"});
+  const res=await fetch(CONFIG.apiUrl,{method:"POST",body:JSON.stringify({senha:pw}),headers:{"Content-Type":"text/plain;charset=utf-8"},cache:"no-store"});
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j=await res.json();
+  if(!j.ok){
+    const m={senha:"Senha incorreta.",config:"A senha do painel ainda não foi cadastrada no Apps Script."}[j.erro]||"Resposta inesperada da planilha.";
+    throw Object.assign(new Error(m),{code:j.erro});
+  }
+  return j.linhas;
+}
+
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const pw=$("pw").value; if(!pw) return;
+  $("enter").disabled=true; $("enter").textContent="Entrando…"; $("loginErr").hidden=true;
+  try{
+    const rows=await fetchRows(pw);
+    senha=pw; try{sessionStorage.setItem(KEY,pw)}catch(_){}
+    start(rows);
+  }catch(err){
+    $("loginErr").textContent=err.code?err.message:"Não consegui falar com a planilha ("+err.message+"). Tente de novo em instantes.";
+    $("loginErr").hidden=false;
+  }finally{ $("enter").disabled=false; $("enter").textContent="Entrar"; }
+});
+
+function start(rows){
+  $("login").hidden=true; $("app").hidden=false; $("logout").hidden=false; $("sync").hidden=false;
+  ingest(rows);
+  clearInterval(timer); timer=setInterval(load,CONFIG.refreshMinutes*60*1000);
+}
+
+async function load(){
+  if(!senha){showLogin();return}
+  $("sync").className="sync load"; $("syncText").textContent="Atualizando…";
+  try{ ingest(await fetchRows(senha)); }
+  catch(err){
+    if(err.code==="senha"){showLogin("Sua senha deixou de valer. Peça a nova senha a quem administra o painel.");return}
+    if(!DATA.length&&$("app").hidden){showLogin(err.code?err.message:"Não consegui falar com a planilha. Tente de novo.");return}
+    $("sync").className="sync err";
+    $("syncText").textContent="Falha ao atualizar, mostrando a última leitura";
+  }
+}
+
+function ingest(rows){
+  const {records,missing}=toRecords(rows);
+  DATA=records; lastSync=new Date();
+  $("err").hidden=!missing.length;
+  if(missing.length) $("err").textContent="Algumas colunas esperadas não foram encontradas na planilha: "+missing.join(", ")+". Os indicadores que dependem delas podem ficar zerados.";
+  $("sync").className="sync";
+  $("syncText").textContent="Atualizado às "+lastSync.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  fillFilters(); render();
+}
+
+/* ===== Filtros ===== */
+function opts(sel,values,all){
+  const cur=sel.value;
+  sel.innerHTML=`<option value="">${all}</option>`+values.map(v=>`<option value="${esc(v[0])}">${esc(v[1])}</option>`).join("");
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+function fillFilters(){
+  const uniq=k=>[...new Set(DATA.map(r=>r[k]))].sort((a,b)=>a.localeCompare(b,"pt-BR")).map(v=>[v,v]);
+  opts($("fsdr"),uniq("sdr"),"Todos");
+  opts($("femp"),uniq("emp"),"Todos");
+  opts($("fsit"),Object.entries(SIT),"Todas");
+  opts($("fstage"),STAGES.map((s,i)=>[String(i),s.name]).slice(1),"Qualquer");
+}
+function filters(){
+  return {q:norm($("fq").value),sdr:$("fsdr").value,emp:$("femp").value,sit:$("fsit").value,
+          stage:$("fstage").value,de:$("fde").value,ate:$("fate").value};
+}
+function apply(f,skip){
+  return DATA.filter(r=>{
+    if(f.q && !norm(r.nome+" "+r.obs1+" "+r.obs2+" "+r.emp).includes(f.q)) return false;
+    if(f.sdr && skip!=="sdr" && r.sdr!==f.sdr) return false;
+    if(f.emp && skip!=="emp" && r.emp!==f.emp) return false;
+    if(f.sit && r.sit!==f.sit) return false;
+    if(f.stage && skip!=="stage" && r.stage<+f.stage) return false;
+    const d=r.dates.lead;
+    if(f.de && (!d || iso(d)<f.de)) return false;
+    if(f.ate && (!d || iso(d)>f.ate)) return false;
+    return true;
+  });
+}
+function setFilter(id,val){ $(id).value=$(id).value===val?"":val; render(); }
+
+/* ===== Render ===== */
+function render(){
+  const f=filters(), rows=apply(f);
+  const n=Object.values(f).filter(Boolean).length;
+  $("activeCount").textContent=n?`${n} filtro${n>1?"s":""} ativo${n>1?"s":""} · ${rows.length} de ${DATA.length} clientes`:`${DATA.length} clientes`;
+  renderKpis(rows); renderFunnel(apply(f,"stage"),f); renderReasons(rows);
+  renderSdr(apply(f,"sdr"),f); renderEmp(apply(f,"emp"),f); renderWeeks(rows); renderList(rows);
+  $("foot").innerHTML=`Fonte: planilha Google “Entregadores iFood”, lida a cada ${CONFIG.refreshMinutes} min após o login. `+
+    `Telefone e CPF são removidos antes de chegar a este painel. Situação “Contrato assinado” vem da coluna “Contrato assinado?”; “Perdido” do Status “Fechado e perdido”.`;
+  if(openId!=null) openDrawer(openId,true);
+}
+
+function renderKpis(rows){
+  const c={won:0,open:0,lost:0}; rows.forEach(r=>c[r.sit]++);
+  const won=rows.filter(r=>r.sit==="won");
+  const vgv=won.reduce((s,r)=>s+(r.valorN||0),0);
+  const cyc=won.map(r=>r.cycle).filter(v=>v!=null);
+  const avgCyc=cyc.length?Math.round(cyc.reduce((a,b)=>a+b,0)/cyc.length):null;
+  const stale=rows.filter(r=>r.stale).length;
+  const decided=c.won+c.lost;
+  const k=[
+    ["","Leads",fmtN(rows.length),"atendidos pelos SDRs"],
+    ["open","Em andamento",fmtN(c.open),stale?`${stale} parado${stale>1?"s":""} há +${CONFIG.staleDays} dias`:"todos com movimento recente"],
+    ["won","Contratos assinados",fmtN(c.won),`${pct(c.won,rows.length)} dos leads`],
+    ["lost","Perdidos",fmtN(c.lost),`${pct(c.lost,rows.length)} dos leads`],
+    ["","Taxa de ganho",pct(c.won,decided),"entre os leads já decididos"],
+    ["won","VGV assinado",fmtMi(vgv),won.length?`ticket médio ${fmtBRL(vgv/won.length)}`:"sem contratos no filtro"],
+    ["","Ciclo médio",avgCyc==null?"—":avgCyc+" dias","do atendimento ao contrato"]
+  ];
+  $("kpis").innerHTML=k.map(([cls,a,b,s])=>`<div class="kpi ${cls}"><span class="k">${a}</span><span class="v">${b}</span><span class="s">${esc(s)}</span></div>`).join("");
+}
+
+function renderFunnel(rows,f){
+  const total=rows.length||1;
+  const counts=STAGES.map((_,i)=>rows.filter(r=>r.stage>=i).length);
+  const lostAt=STAGES.map((_,i)=>rows.filter(r=>r.stage===i&&r.sit==="lost").length);
+  $("funnel").innerHTML=STAGES.map((s,i)=>{
+    const w=Math.max(counts[i]/total*100,counts[i]?4:0);
+    const conv=i===0?"base":pct(counts[i],counts[i-1])+" da anterior";
+    const sel=f.stage===String(i)?" sel":"";
+    return `<button type="button" class="fstep${sel}" data-stage="${i}">
+      <span class="lab">${s.name}<small>${pct(counts[i],rows.length)} dos leads</small></span>
+      <span class="fbar"><span class="${i===STAGES.length-1?"last":""}" style="width:${w}%">${counts[i]}</span></span>
+      <span class="fnum"><b>${conv}</b>${lostAt[i]?`<span class="drop">${lostAt[i]} perdido${lostAt[i]>1?"s":""} aqui</span>`:"&nbsp;"}</span>
+    </button>`;
+  }).join("");
+  $("funnel").querySelectorAll(".fstep").forEach(b=>b.onclick=()=>setFilter("fstage",b.dataset.stage==="0"?"":b.dataset.stage));
+}
+
+function renderReasons(rows){
+  const lost=rows.filter(r=>r.sit==="lost");
+  if(!lost.length){$("reasons").innerHTML=`<div class="empty">Nenhum cliente perdido no filtro atual.</div>`;return}
+  const m={}; lost.forEach(r=>m[r.reason]=(m[r.reason]||0)+1);
+  const arr=Object.entries(m).sort((a,b)=>b[1]-a[1]); const max=arr[0][1];
+  $("reasons").innerHTML=arr.map(([k,v])=>`<div class="hrow"><span class="n" title="${esc(k)}">${esc(k)}</span>
+    <span class="stack"><i class="c-lost" style="width:${v/max*100}%"></i></span><span class="t">${v}</span></div>`).join("");
+}
+
+function groupSit(rows,key){
+  const g={};
+  rows.forEach(r=>{const k=r[key];(g[k]??={k,won:0,open:0,lost:0,n:0,vgv:0,adv:0});g[k][r.sit]++;g[k].n++;
+    if(r.sit==="won")g[k].vgv+=r.valorN||0; if(r.stage>=4)g[k].adv++;});
+  return Object.values(g).sort((a,b)=>b.n-a.n||b.won-a.won);
+}
+
+function renderSdr(rows,f){
+  const g=groupSit(rows,"sdr");
+  $("sdrTable").innerHTML=`<thead><tr><th>SDR</th><th class="num">Leads</th><th class="num">Andamento</th><th class="num">Assinados</th><th class="num">Perdidos</th><th class="num">Conversão</th><th class="num">VGV</th></tr></thead><tbody>`+
+    (g.length?g.map(x=>`<tr class="click${f.sdr===x.k?" sel":""}" data-v="${esc(x.k)}"><td class="name">${esc(x.k)}</td><td class="num">${x.n}</td><td class="num">${x.open}</td>
+      <td class="num">${x.won}</td><td class="num">${x.lost}</td><td class="num"><b>${pct(x.won,x.n)}</b></td><td class="num">${x.vgv?fmtMi(x.vgv):"—"}</td></tr>`).join("")
+     :`<tr><td colspan="7" class="empty">Nenhum lead no filtro atual.</td></tr>`)+`</tbody>`;
+  $("sdrTable").querySelectorAll("tr.click").forEach(tr=>tr.onclick=()=>setFilter("fsdr",tr.dataset.v));
+}
+
+function renderEmp(rows,f){
+  const g=groupSit(rows,"emp"); if(!g.length){$("emp").innerHTML=`<div class="empty">Nenhum lead no filtro atual.</div>`;return}
+  const max=Math.max(...g.map(x=>x.n));
+  $("emp").innerHTML=g.map(x=>`<button type="button" class="hrow click${f.emp===x.k?" sel":""}" data-v="${esc(x.k)}" title="${esc(x.k)}: ${x.won} assinados, ${x.open} em andamento, ${x.lost} perdidos">
+    <span class="n">${esc(x.k)}</span>
+    <span class="stack" style="width:${x.n/max*100}%"><i class="c-won" style="width:${x.won/x.n*100}%"></i><i class="c-open" style="width:${x.open/x.n*100}%"></i><i class="c-lost" style="width:${x.lost/x.n*100}%"></i></span>
+    <span class="t">${x.n}</span></button>`).join("");
+  $("emp").querySelectorAll(".hrow").forEach(b=>b.onclick=()=>setFilter("femp",b.dataset.v));
+}
+
+function renderWeeks(rows){
+  const wk=d=>{const x=startOfDay(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+  const dated=rows.filter(r=>r.dates.lead);
+  if(!dated.length){$("weeks").innerHTML=`<div class="empty" style="width:100%">Sem datas de atendimento no filtro atual.</div>`;$("weeksx").innerHTML="";return}
+  const first=wk(new Date(Math.min(...dated.map(r=>+r.dates.lead)))), last=wk(new Date(Math.max(...dated.map(r=>+r.dates.lead))));
+  const buckets=[]; for(let d=new Date(first);d<=last;d.setDate(d.getDate()+7)) buckets.push({d:new Date(d),won:0,open:0,lost:0,n:0});
+  dated.forEach(r=>{const b=buckets.find(b=>+b.d===+wk(r.dates.lead)); b[r.sit]++; b.n++;});
+  const max=Math.max(...buckets.map(b=>b.n));
+  $("weeks").innerHTML=buckets.map(b=>`<div class="col" title="Semana de ${fmtD(b.d)}: ${b.n} leads (${b.won} assinados, ${b.open} em andamento, ${b.lost} perdidos)">
+    <div class="bar" style="height:${b.n/max*100}%">${["lost","open","won"].map(s=>b[s]?`<i class="c-${s}" style="flex:${b[s]}"></i>`:"").join("")}</div>
+    ${b.n?`<span class="lbl" style="bottom:${b.n/max*100}%;top:auto">${b.n}</span>`:""}</div>`).join("");
+  $("weeks").querySelectorAll(".bar").forEach(el=>{el.style.display="flex";el.style.flexDirection="column-reverse"});
+  $("weeksx").innerHTML=buckets.map(b=>`<span>${b.d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</span>`).join("");
+}
+
+const SORTS={
+  nome:r=>norm(r.nome), sdr:r=>norm(r.sdr), lead:r=>r.dates.lead?+r.dates.lead:0, emp:r=>norm(r.emp),
+  valor:r=>r.valorN||0, stage:r=>r.stage*10+(r.sit==="won"?2:r.sit==="open"?1:0), sit:r=>({open:0,won:1,lost:2})[r.sit], idle:r=>r.sit==="open"?(r.idle??-1):-2
+};
+function renderList(rows){
+  const {k,dir}=sortBy, key=SORTS[k];
+  rows=[...rows].sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*dir||a.nome.localeCompare(b.nome)});
+  const th=(id,label,cls="")=>`<th class="sort ${cls}" data-k="${id}" aria-sort="${k===id?(dir>0?"ascending":"descending"):"none"}">${label} <span class="ar">${k===id?(dir>0?"▲":"▼"):""}</span></th>`;
+  $("listTitle").textContent=`Clientes (${rows.length})`;
+  $("list").innerHTML=`<thead><tr>${th("nome","Cliente")}${th("sdr","SDR")}${th("lead","Atendido")}${th("emp","Empreendimento")}${th("valor","Valor","num")}${th("stage","Etapa atual")}${th("sit","Situação")}${th("idle","Sem mov.","num")}<th>Última observação</th></tr></thead><tbody>`+
+  (rows.length?rows.map(r=>`<tr class="click${openId===r.id?" sel":""}" data-id="${r.id}" tabindex="0">
+    <td class="name">${esc(r.nome)}</td><td>${esc(r.sdr)}</td><td>${fmtD(r.dates.lead)}</td><td>${esc(r.emp)}</td>
+    <td class="num">${fmtBRL(r.valorN)}</td>
+    <td><div class="steps ${r.sit}">${STAGES.map((_,i)=>`<i class="${i<=r.stage?"on":""}"></i>`).join("")}</div><span class="sub">${STAGES[r.stage].name}</span></td>
+    <td><span class="pill ${r.sit}">${SIT[r.sit]}</span>${r.stale?` <span class="pill warn">parado</span>`:""}</td>
+    <td class="num">${r.sit==="open"&&r.idle!=null?r.idle+" d":"—"}</td>
+    <td><div class="note">${esc(r.obs2||r.obs1||"—")}</div></td></tr>`).join("")
+   :`<tr><td colspan="9" class="empty">Nenhum cliente com esses filtros.</td></tr>`)+`</tbody>`;
+  $("list").querySelectorAll("th.sort").forEach(h=>h.onclick=()=>{const id=h.dataset.k;sortBy={k:id,dir:sortBy.k===id?-sortBy.dir:(id==="nome"||id==="sdr"||id==="emp"?1:-1)};render()});
+  $("list").querySelectorAll("tr.click").forEach(tr=>{tr.onclick=()=>openDrawer(+tr.dataset.id);tr.onkeydown=e=>{if(e.key==="Enter")openDrawer(+tr.dataset.id)}});
+}
+
+/* ===== Detalhe ===== */
+function openDrawer(id,quiet){
+  const r=DATA.find(x=>x.id===id); if(!r){closeDrawer();return}
+  openId=id;
+  const dateFor=[r.dates.lead,null,r.dates.docs,r.dates.caixa,r.dates.proposta,r.dates.aceite,r.dates.contrato];
+  const extra=[null,r.emp!=="Não definido"?r.emp:null,has(r.envioDoc)?r.envioDoc:null,has(r.aprov)?"Aprovação: "+r.aprov:null,null,has(r.sla)?"Dentro do SLA 48h: "+r.sla:null,null];
+  const tl=STAGES.map((s,i)=>{
+    const on=i<=r.stage, stop=r.sit==="lost"&&i===r.stage+1;
+    return `<li class="${on?"on":""}${stop?" stop":""}${i===STAGES.length-1?" final":""}"><span class="mk"></span>
+      <span class="what">${s.name}${extra[i]?`<div class="sub">${esc(extra[i])}</div>`:""}${stop?`<div class="sub">Perdido ${r.dates.perda?"em "+fmtD(r.dates.perda):""} · ${esc(r.reason)}</div>`:""}</span>
+      <span class="d">${fmtD(dateFor[i])==="—"?"":fmtD(dateFor[i])}</span></li>`;
+  }).join("");
+  $("drawer").innerHTML=`<header><div><h3 id="dName">${esc(r.nome)}</h3><span class="pill ${r.sit}">${SIT[r.sit]}</span>${r.stale?` <span class="pill warn">parado há ${r.idle} dias</span>`:""}</div>
+    <button class="x" id="dClose" type="button" aria-label="Fechar">×</button></header>
+    <div class="body">
+      <dl class="facts"><dt>SDR</dt><dd>${esc(r.sdr)}</dd><dt>Status na planilha</dt><dd>${esc(r.status||"—")}</dd>
+        <dt>Empreendimento</dt><dd>${esc(r.emp)}</dd><dt>Valor do imóvel</dt><dd>${fmtBRL(r.valorN)}</dd>
+        ${r.cycle!=null?`<dt>Ciclo</dt><dd>${r.cycle} dias até o contrato</dd>`:""}</dl>
+      <ol class="tl">${tl}</ol>
+      ${r.obs1?`<div class="box"><b>Observação do SDR</b>${esc(r.obs1)}</div>`:""}
+      ${r.obs2?`<div class="box"><b>Observações</b>${esc(r.obs2)}</div>`:""}
+    </div>`;
+  $("drawer").hidden=false; $("dbg").hidden=false;
+  $("dClose").onclick=closeDrawer;
+  if(!quiet) $("dClose").focus();
+  document.querySelectorAll("#list tr.click").forEach(tr=>tr.classList.toggle("sel",+tr.dataset.id===id));
+}
+function closeDrawer(){openId=null;$("drawer").hidden=true;$("dbg").hidden=true;document.querySelectorAll("#list tr.sel").forEach(tr=>tr.classList.remove("sel"))}
+
+/* ===== Eventos ===== */
+["fq","fsdr","femp","fsit","fstage","fde","fate"].forEach(id=>$(id).addEventListener("input",render));
+$("clear").onclick=()=>{["fq","fsdr","femp","fsit","fstage","fde","fate"].forEach(id=>$(id).value="");render()};
+$("refresh").onclick=load;
+$("dbg").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId!=null)closeDrawer()});
+$("logout").onclick=()=>showLogin();
+if(senha){
+  $("syncText").textContent="Carregando a planilha…";
+  fetchRows(senha).then(start).catch(err=>showLogin(err.code==="senha"?"Sua senha deixou de valer.":""));
+}else showLogin();
+</script>
+</body>
+</html>
